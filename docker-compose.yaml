@@ -5,7 +5,13 @@ services:
       dockerfile: Dockerfile
     container_name: open-webui
     environment:
-      - OPENAI_API_KEY=your_openai_api_key
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - SMTP_FROM_ADDRESS=${SMTP_FROM_ADDRESS}
+      - SMTP_USE_TLS=${SMTP_USE_TLS}
     ports:
       - "3000:8080"
     volumes:

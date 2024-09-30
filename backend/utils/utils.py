@@ -13,6 +13,10 @@ import jwt
 import uuid
 import logging
 import config
+import smtplib
+from email.mime.text import MIMEText
+import logging
+from config import EMAIL_CONFIG
 
 logging.getLogger("passlib").setLevel(logging.ERROR)
 
@@ -129,3 +133,26 @@ def get_admin_user(user=Depends(get_current_user)):
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
     return user
+
+async def send_reset_email(to_email: str, reset_link: str):
+    try:
+        html = f"""\
+        <html>
+        <body>
+            Click the following link to reset your password: <a href="{reset_link}">Reset Password</a>
+        </body>
+        </html>
+        """
+        msg = MIMEText(html, 'html')
+        msg["Subject"] = "Password Reset"
+        msg["From"] = EMAIL_CONFIG["FROM_ADDRESS"]
+        msg["To"] = to_email
+
+        with smtplib.SMTP(EMAIL_CONFIG["HOST"], EMAIL_CONFIG["PORT"]) as server:
+            if EMAIL_CONFIG["USE_TLS"]:
+                server.starttls()
+            server.login(EMAIL_CONFIG["USER"], EMAIL_CONFIG["PASSWORD"])
+            server.sendmail(EMAIL_CONFIG["FROM_ADDRESS"], to_email, msg.as_string())
+        
+    except Exception as e:
+        raise e

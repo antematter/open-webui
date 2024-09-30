@@ -31,6 +31,19 @@ except ImportError:
 
 
 ####################################
+# SMTP CONFIGURATION
+####################################
+
+EMAIL_CONFIG = {
+    "HOST": os.getenv("SMTP_HOST", "smtp.gmail.com"),
+    "PORT": int(os.getenv("SMTP_PORT", 587)),
+    "USER": os.getenv("SMTP_USER"),
+    "PASSWORD": os.getenv("SMTP_PASSWORD"),
+    "FROM_ADDRESS": os.getenv("SMTP_FROM_ADDRESS"),
+    "USE_TLS": os.getenv("SMTP_USE_TLS", "true").lower() == "true",
+}
+
+####################################
 # LOGGING
 ####################################
 

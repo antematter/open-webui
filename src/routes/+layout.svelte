@@ -14,9 +14,9 @@
 
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import i18n, { initI18n } from '$lib/i18n';
-
+	
 	setContext('i18n', i18n);
-
+	
 	let loaded = false;
 	const BREAKPOINT = 768;
 
@@ -48,10 +48,18 @@
 		if (backendConfig) {
 			// Save Backend Status to Store
 			await config.set(backendConfig);
-
 			await WEBUI_NAME.set(backendConfig.name);
 
-			if ($config) {
+			const url = new URL(window.location.href);
+			const params = new URLSearchParams(url.search);
+			const modeParam = params.get('mode');
+			const tokenParam = params.get('token');
+
+			if (modeParam && tokenParam) {
+				// If mode and token are present, it's the reset password flow
+				console.log('Reset password flow detected');
+			} else {
+				// Otherwise, it's the main app flow
 				if (localStorage.token) {
 					// Get Session User Info
 					const sessionUser = await getSessionUser(localStorage.token).catch((error) => {
@@ -77,7 +85,6 @@
 		}
 
 		await tick();
-
 		document.getElementById('splash-screen')?.remove();
 		loaded = true;
 
@@ -90,11 +97,6 @@
 <svelte:head>
 	<title>{$WEBUI_NAME}</title>
 	<link crossorigin="anonymous" rel="icon" href="{WEBUI_BASE_URL}/static/favicon.png" />
-
-	<!-- rosepine themes have been disabled as it's not up to date with our latest version. -->
-	<!-- feel free to make a PR to fix if anyone wants to see it return -->
-	<!-- <link rel="stylesheet" type="text/css" href="/themes/rosepine.css" />
-	<link rel="stylesheet" type="text/css" href="/themes/rosepine-dawn.css" /> -->
 </svelte:head>
 
 {#if loaded}

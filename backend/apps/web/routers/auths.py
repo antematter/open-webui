@@ -1,4 +1,6 @@
 import logging
+import random 
+import string
 
 from fastapi import Request, UploadFile, File
 from fastapi import Depends, HTTPException, status
@@ -24,6 +26,8 @@ from apps.web.models.auths import (
     SigninResponse,
     Auths,
     ApiKey,
+    ForgotPasswordForm,
+    ResetPasswordForm,
 )
 from apps.web.models.users import Users
 
@@ -33,7 +37,9 @@ from utils.utils import (
     get_admin_user,
     create_token,
     create_api_key,
+    decode_token,
 )
+from utils.utils import send_reset_email
 from utils.misc import parse_duration, validate_email_format
 from utils.webhook import post_webhook
 from constants import ERROR_MESSAGES, WEBHOOK_MESSAGES, GOOGLE_SHEET_CREDENTIALS
@@ -171,6 +177,55 @@ async def signin(request: Request, form_data: SigninForm):
     else:
         raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
 
+############################
+# Forgot Password
+############################
+
+@router.post("/forgot-password", response_model=bool)
+async def forgot_password(form_data: ForgotPasswordForm):
+    user = Users.get_user_by_email(form_data.email.lower())
+    if user:
+        token = create_token(data={"id": user.id}, expires_delta=timedelta(minutes=15))
+        reset_link = f"http://localhost:3000/auth?mode=reset&token={token}"
+    # Send the reset link to the user's email
+        await send_reset_email(form_data.email, reset_link)
+        return True
+    else:
+        raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_EMAIL)
+
+############################
+# Reset Password
+############################
+
+@router.post("/reset-password", response_model=bool)
+async def reset_password(form_data: ResetPasswordForm):
+    payload = decode_token(form_data.token)
+    user_id = payload.get("id")
+    user = Users.get_user_by_id(user_id)
+
+    if user:
+        hashed = get_password_hash(form_data.new_password)
+        Auths.update_user_password_by_id(user_id, hashed)
+        return True
+    else:
+        raise HTTPException(400, detail=ERROR_MESSAGES.USER_NOT_FOUND)
+
+@router.post("/update/password", response_model=bool)
+async def update_password(
+    form_data: UpdatePasswordForm, session_user=Depends(get_current_user)
+):
+    if WEBUI_AUTH_TRUSTED_EMAIL_HEADER:
+        raise HTTPException(400, detail=ERROR_MESSAGES.ACTION_PROHIBITED)
+    if session_user:
+        user = Auths.authenticate_user(session_user.email, form_data.password)
+
+        if user:
+            hashed = get_password_hash(form_data.new_password)
+            return Auths.update_user_password_by_id(user.id, hashed)
+        else:
+            raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_PASSWORD)
+    else:
+        raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
 
 ############################
 # SignUp
